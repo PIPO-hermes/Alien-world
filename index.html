@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Alien World - Geometric Trees</title>
+  <script>p5.disableFriendlyErrors = true;</script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.3/p5.min.js"></script>
+  <style>
+    html, body { margin: 0; padding: 0; overflow: hidden; background: #0a0a0a; }
+    canvas { display: block; }
+    #info {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      color: #0f0;
+      font-family: monospace;
+      font-size: 12px;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 10px;
+      border: 1px solid #0f0;
+      z-index: 10;
+    }
+  </style>
+</head>
+<body>
+<div id="info">🌳 Alien Geometric Trees<br>Press 'S' to save PNG</div>
+<script>
+// === Alien World with Geometric Trees ===
+// Trees with branches only in straight lines and perfect 90-degree angles
+
+const CONFIG = {
+  seed: 42,
+  timeScale: 0.3,
+};
+
+// Alien Sky Palette - purples, cyans, greens, electric colors
+const PALETTE = {
+  bg1: { h: 260, s: 15, b: 8 },      // Deep dark purple
+  bg2: { h: 180, s: 20, b: 12 },     // Deep cyan
+  sky1: { h: 280, s: 30, b: 25 },    // Purple gradient
+  sky2: { h: 200, s: 40, b: 35 },    // Cyan gradient
+  tree1: { h: 120, s: 80, b: 50 },   // Electric lime green
+  tree2: { h: 180, s: 100, b: 60 },  // Bright cyan
+  accent1: { h: 280, s: 100, b: 70 },// Electric magenta
+  accent2: { h: 60, s: 100, b: 80 }, // Electric yellow
+  mist: { h: 260, s: 50, b: 30 },    // Misty purple
+};
+
+let t = 0;
+let trees = [];
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  pixelDensity(1);
+  colorMode(HSB, 360, 100, 100, 100);
+  randomSeed(CONFIG.seed);
+  noiseSeed(CONFIG.seed);
+  
+  // Generate trees
+  generateTrees();
+}
+
+function draw() {
+  t += 0.016 * CONFIG.timeScale;
+  
+  // Animated gradient sky
+  drawAlienSky();
+  
+  // Foreground mist layer
+  drawMist();
+  
+  // Draw all trees
+  for (let tree of trees) {
+    tree.display(t);
+  }
+  
+  // Floating geometric particles
+  drawGeometricParticles();
+}
+
+function generateTrees() {
+  trees = [];
+  
+  // Create trees at specific locations
+  const treePositions = [
+    { x: width * 0.15, y: height * 0.65, scale: 1.2, rotation: 0 },
+    { x: width * 0.45, y: height * 0.70, scale: 0.8, rotation: 0 },
+    { x: width * 0.75, y: height * 0.68, scale: 1.0, rotation: 0 },
+    { x: width * 0.25, y: height * 0.85, scale: 0.6, rotation: 0 },
+    { x: width * 0.65, y: height * 0.88, scale: 0.7, rotation: 0 },
+  ];
+  
+  for (let pos of treePositions) {
+    trees.push(new GeometricTree(pos.x, pos.y, pos.scale, pos.rotation));
+  }
+}
+
+function drawAlienSky() {
+  // Multi-layered animated gradient sky
+  for (let y = 0; y < height; y++) {
+    let h = PALETTE.sky1.h + sin(y * 0.003 + t * 0.2) * 30;
+    let s = PALETTE.sky1.s + sin(t * 0.1) * 15;
+    let b = map(y, 0, height, PALETTE.sky1.b, PALETTE.bg2.b);
+    stroke(h, s, b);
+    line(0, y, width, y);
+  }
+  
+  // Add atmospheric bands
+  noStroke();
+  for (let i = 0; i < 3; i++) {
+    let yPos = height * (0.3 + i * 0.3) + sin(t * 0.15 + i) * 20;
+    let bandH = map(i, 0, 3, PALETTE.mist.h, PALETTE.accent1.h);
+    fill(bandH, 40, 15, 30);
+    ellipse(width / 2, yPos, width * 1.5, 200);
+  }
+}
+
+function drawMist() {
+  // Foreground misty geometric shapes
+  noFill();
+  stroke(PALETTE.mist.h, 50, 40, 20);
+  strokeWeight(1);
+  
+  for (let i = 0; i < 5; i++) {
+    let x = i * (width / 5) + sin(t * 0.05 + i) * 50;
+    let y = height - 100;
+    
+    // Geometric grid pattern
+    rect(x, y, 150, 150);
+    rect(x + 25, y + 25, 100, 100);
+    rect(x + 50, y + 50, 50, 50);
+  }
+}
+
+function drawGeometricParticles() {
+  // Floating geometric elements
+  stroke(PALETTE.accent2.h, 100, 80, 50);
+  strokeWeight(2);
+  noFill();
+  
+  for (let i = 0; i < 8; i++) {
+    let angle = (i / 8) * TWO_PI + t * 0.1;
+    let x = width / 2 + cos(angle) * 300;
+    let y = height / 2 + sin(angle) * 200 + t * 30 % height;
+    
+    // Draw geometric shapes
+    rect(x - 10, y - 10, 20, 20);
+    line(x - 15, y, x + 15, y);
+    line(x, y - 15, x, y + 15);
+  }
+}
+
+// === Geometric Tree Class ===
+// Branches grow ONLY in straight lines and perfect 90-degree angles
+class GeometricTree {
+  constructor(x, y, scale = 1, rotation = 0) {
+    this.x = x;
+    this.y = y;
+    this.scale = scale;
+    this.rotation = rotation;
+    this.branches = [];
+    this.generateBranches();
+  }
+  
+  generateBranches() {
+    this.branches = [];
+    
+    // Main trunk (vertical line down)
+    this.branches.push({
+      x1: this.x, y1: this.y,
+      x2: this.x, y2: this.y + 150 * this.scale,
+      level: 0,
+      direction: 'down'
+    });
+    
+    // Recursive right-angle branching
+    this.addBranches(this.x, this.y + 150 * this.scale, 'down', 1, 120 * this.scale);
+  }
+  
+  addBranches(x, y, fromDir, level, branchLen) {
+    if (level > 4 || branchLen < 10) return;
+    
+    // At each junction, branches split at RIGHT ANGLES ONLY
+    // If coming from above (down), split left and right (horizontal)
+    // If coming from left/right, split up and down (vertical)
+    
+    if (fromDir === 'down') {
+      // Split into left and right
+      const offset = branchLen * 0.7;
+      
+      // Left branch (90 degree left)
+      this.branches.push({
+        x1: x, y1: y,
+        x2: x - offset, y2: y,
+        level: level,
+        direction: 'left'
+      });
+      this.addBranches(x - offset, y, 'left', level + 1, branchLen * 0.6);
+      
+      // Right branch (90 degree right)
+      this.branches.push({
+        x1: x, y1: y,
+        x2: x + offset, y2: y,
+        level: level,
+        direction: 'right'
+      });
+      this.addBranches(x + offset, y, 'right', level + 1, branchLen * 0.6);
+    } else if (fromDir === 'left' || fromDir === 'right') {
+      // Split up and down (vertical)
+      const offset = branchLen * 0.7;
+      
+      // Up branch
+      this.branches.push({
+        x1: x, y1: y,
+        x2: x, y2: y - offset,
+        level: level,
+        direction: 'up'
+      });
+      this.addBranches(x, y - offset, 'up', level + 1, branchLen * 0.6);
+      
+      // Down branch
+      this.branches.push({
+        x1: x, y1: y,
+        x2: x, y2: y + offset,
+        level: level,
+        direction: 'down'
+      });
+      this.addBranches(x, y + offset, 'down', level + 1, branchLen * 0.6);
+    }
+  }
+  
+  display(time) {
+    push();
+    
+    // Animate color based on level
+    for (let branch of this.branches) {
+      let colorChoice = branch.level % 2;
+      let hue = colorChoice === 0 ? PALETTE.tree1.h : PALETTE.tree2.h;
+      let sat = 80 + sin(time * 0.3 + branch.level) * 20;
+      let bri = 50 + cos(time * 0.25 + branch.level * 0.5) * 15;
+      
+      stroke(hue, sat, bri);
+      
+      // Thickness decreases with level
+      let thickness = 8 - branch.level * 1.5;
+      strokeWeight(max(1, thickness));
+      
+      // Draw the branch line
+      line(branch.x1, branch.y1, branch.x2, branch.y2);
+      
+      // Add glowing effect
+      stroke(hue, sat * 0.5, bri + 20, 30);
+      strokeWeight(thickness + 3);
+      line(branch.x1, branch.y1, branch.x2, branch.y2);
+    }
+    
+    // Add junction points (where branches meet)
+    noStroke();
+    for (let branch of this.branches) {
+      let colorChoice = branch.level % 2;
+      let hue = colorChoice === 0 ? PALETTE.tree1.h : PALETTE.tree2.h;
+      fill(hue, 100, 70);
+      ellipse(branch.x1, branch.y1, 3 + branch.level);
+    }
+    
+    pop();
+  }
+}
+
+function keyPressed() {
+  if (key === 's' || key === 'S') {
+    saveCanvas('alien_world_geometric_trees', 'png');
+    print('Image saved!');
+  }
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+}
+</script>
+</body>
+</html>
